@@ -1,6 +1,7 @@
 import music21
 import numpy as np
 import os
+from music21 import chord
 
 cd = os.getcwd()
 
@@ -55,7 +56,8 @@ def normalize_pitch(scores):
         else:
             interval = music21.interval.Interval(music21.pitch.Pitch(tonic), music21.pitch.Pitch('A'))
         scores['normalized_mid'][i] = scores['mid'][i].transpose(interval)
-               
+        scores['normalized_mid'][i] = scores['normalized_mid'][i].flatten(retainContainers=True)
+
 normalize_pitch(scores)
 
 ## TO DO Tempo and dynamics normalization
@@ -107,19 +109,37 @@ normalize_pitch(scores)
 #         Vmax = argmax(mid.volume)
         
 # generate transition matrix from normalized MIDI data
-def generate_transition_matrix(scores):
+def generate_melody_matrix(scores):
     transition_matrix = np.zeros((128, 128))  # MIDI note range from 0 to 127
 
+    # Flatten the normalized MIDI data by track
     for mid in scores['normalized_mid']:
-        notes = [n.pitch.midi for n in mid.flat.notes if n.isNote]
-        for (note1, note2) in zip(notes[:-1], notes[1:]):
-            transition_matrix[note1][note2] += 1
+        flat_mid = mid.flatten(retainContainers=True)
+       
+        # Index tracks and check for chords to see if harmony or melody
+        for track in flat_mid.parts:
+            chord_in_track = track[j].getElementsByClass(chord.Chord)
+            
+            # If chords are present, skip this track
+            if len(chord_in_track) > 0:
+                continue
+            else:
+                for n, tone in enumerate(track[j]):
+                    notes = [n.pitch.midi for n in track[j].notes if n.isNote]
+    print(notes)          
+            
+generate_melody_matrix(scores)
 
-    # Normalize the matrix
-    row_sums = transition_matrix.sum(axis=1, keepdims=True)
-    transition_matrix = np.divide(transition_matrix, row_sums, where=row_sums!=0)
 
-    return transition_matrix
+#                 # Generate transitions within this track
+#                 for (note1, note2) in zip(notes[:-1], notes[1:]):
+#                     transition_matrix[note1][note2] += 1
 
-transition_matrix = generate_transition_matrix(scores)
-print(np.argmax(transition_matrix))        
+#     # Normalize the matrix
+#     row_sums = transition_matrix.sum(axis=1, keepdims=True)
+#     transition_matrix = np.divide(transition_matrix, row_sums, where=row_sums!=0)
+
+#     return transition_matrix
+
+# transition_matrix = generate_melody_matrix(scores)
+# print(np.argmax(transition_matrix))
